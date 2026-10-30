@@ -1,12 +1,5 @@
 import pytest
 
-from src.retrieve import Retriever
-
-
-@pytest.fixture(scope="module")
-def retriever(tmp_path_factory):
-    return Retriever(chroma_path=str(tmp_path_factory.mktemp("chroma")))
-
 
 def test_known_question_finds_right_article(retriever):
     hits = retriever.search("I keep getting 429 Too Many Requests from the API")
