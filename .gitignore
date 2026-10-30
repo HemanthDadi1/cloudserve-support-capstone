@@ -7,3 +7,4 @@ __pycache__/
 chroma_db/
 *.db
 evaluation/results/
+storage/

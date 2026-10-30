@@ -7,7 +7,6 @@ The script reports figures only; interpreting them is done in the workbook.
 """
 import argparse
 import json
-import re
 from pathlib import Path
 
 import pandas as pd
