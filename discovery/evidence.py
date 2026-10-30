@@ -188,6 +188,17 @@ def build(df, docs):
     out += ["## E19. Outcomes by arrival time (UTC) and weekday/weekend\n",
             table(outcomes_by(df, "arrival (UTC)").sort_index()), "", table(outcomes_by(df, "day")), "",
             "Region shares are similar in every arrival band, so arrival time does not explain E7.\n"]
+
+    df["resolution time"] = pd.cut(df.minutes, [0, 60, 240, 720, 10**6], labels=["<1h", "1-4h", "4-12h", "12h+"])
+    out += ["## E20. Satisfaction by resolution time\n",
+            table(outcomes_by(df, "resolution time").sort_index()), ""]
+
+    g = df.groupby("customer_tier")
+    out += ["## E21. Plan follow-up to E5: ticket mix, then like-for-like (doc-answerable, not must-escalate)\n",
+            table(pd.DataFrame({"tickets": g.size(), "must_escalate": g.must_escalate.mean().map(pct),
+                                "answerable": g.answerable.mean().map(pct),
+                                "high urgency": g.urgency.apply(lambda s: pct((s == "high").mean()))})), "",
+            table(outcomes_by(easy, "customer_tier")), ""]
     return "\n".join(out)
 
 

@@ -230,3 +230,26 @@ Customer names and IDs are in structured fields (`customer_name`, `customer_id`)
 | weekend | 118 | 24% | 42% | 58% | 3.04 | 27% | 266 |
 
 Region shares are similar in every arrival band, so arrival time does not explain E7.
+
+## E20. Satisfaction by resolution time
+
+| resolution time | tickets | share | FCR | escalated | mean CSAT | repeat contact | median resolution min |
+|---|---|---|---|---|---|---|---|
+| <1h | 219 | 44% | 100% | 0% | 3.41 | 0% | 32 |
+| 1-4h | 41 | 8% | 0% | 100% | 2.66 | 51% | 186 |
+| 4-12h | 95 | 19% | 0% | 100% | 2.63 | 40% | 462 |
+| 12h+ | 145 | 29% | 0% | 100% | 2.62 | 34% | 1060 |
+
+## E21. Plan follow-up to E5: ticket mix, then like-for-like (doc-answerable, not must-escalate)
+
+| customer_tier | tickets | must_escalate | answerable | high urgency |
+|---|---|---|---|---|
+| business | 164 | 19% | 75% | 23% |
+| enterprise | 83 | 14% | 71% | 36% |
+| standard | 253 | 17% | 69% | 31% |
+
+| customer_tier | tickets | share | FCR | escalated | mean CSAT | repeat contact | median resolution min |
+|---|---|---|---|---|---|---|---|
+| standard | 159 | 49% | 69% | 31% | 3.11 | 11% | 40 |
+| business | 111 | 34% | 71% | 29% | 3.05 | 14% | 44 |
+| enterprise | 56 | 17% | 55% | 45% | 3.34 | 18% | 49 |
