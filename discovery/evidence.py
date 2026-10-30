@@ -96,7 +96,7 @@ def build(df, docs):
 
     # Section 2: counts
     out += ["## E2. Headline figures (workbook §2)\n", table(pd.DataFrame([
-        ["Tickets", n], ["Unique customers", df.customer_id.nunique()],
+        ["Tickets", n], ["Unique customers", df.customer_id.nunique()], ["Distinct message texts", df.body.nunique()],
         ["First contact resolution", pct(df.fcr.mean())], ["Escalated", pct(df.escalated.mean())],
         ["Mean CSAT (1-5)", round(df.csat.mean(), 2)], ["Repeat contacts", pct(df.repeat.mean())],
         ["Answerable from docs", pct(df.answerable.mean())],
