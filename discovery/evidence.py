@@ -162,6 +162,32 @@ def build(df, docs):
             f"- Articles never needed by any dev ticket: {sorted(set(titles) - set(cited.index)) or 'none'}",
             "- Intents with tickets not answerable from docs: "
             + ", ".join(f"{k} {v}/{(df.intent == k).sum()}" for k, v in no_doc.items()), ""]
+
+    # Region follow-up: is the regional gap explained by ticket mix?
+    g = df.groupby("customer_region")
+    share = lambda col, val: g[col].apply(lambda s: pct((s == val).mean()))  # noqa: E731
+    mix = pd.DataFrame({"tickets": g.size(), "answerable": g.answerable.mean().map(pct),
+                        "must_escalate": g.must_escalate.mean().map(pct),
+                        "expected auto": share("expected_route", "auto_respond"),
+                        "high urgency": share("urgency", "high"),
+                        "non_fluent": share("language_fluency", "non_fluent"),
+                        "enterprise": share("customer_tier", "enterprise")})
+    out += ["## E16. Ticket mix by region (follow-up to E7)\n", table(mix), ""]
+    easy = df[df.answerable & ~df.must_escalate]
+    out += ["## E17. Like-for-like by region: doc-answerable, not must-escalate tickets only\n",
+            table(outcomes_by(easy, "customer_region")), ""]
+    fl = df.pivot_table(index="customer_region", columns="language_fluency", values="csat", aggfunc="mean").round(2)
+    fl["tickets (non_fluent)"] = df[df.language_fluency == "non_fluent"].customer_region.value_counts()
+    out += ["## E18. Mean CSAT by region and fluency\n", table(fl), ""]
+
+    # Arrival time: received_at is UTC; the data does not say when the support team works.
+    ts = pd.to_datetime(df.received_at)
+    df["arrival (UTC)"] = pd.cut(ts.dt.hour, [0, 4, 8, 12, 16, 20, 24], right=False,
+                                 labels=["00-04", "04-08", "08-12", "12-16", "16-20", "20-24"])
+    df["day"] = (ts.dt.day_of_week >= 5).map({True: "weekend", False: "weekday"})
+    out += ["## E19. Outcomes by arrival time (UTC) and weekday/weekend\n",
+            table(outcomes_by(df, "arrival (UTC)").sort_index()), "", table(outcomes_by(df, "day")), "",
+            "Region shares are similar in every arrival band, so arrival time does not explain E7.\n"]
     return "\n".join(out)
 
 

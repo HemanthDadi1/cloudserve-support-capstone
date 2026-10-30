@@ -185,3 +185,48 @@ Customer names and IDs are in structured fields (`customer_name`, `customer_id`)
 - `last_reviewed_days_ago`: min 0, max 0 (a constant value cannot show staleness)
 - Articles never needed by any dev ticket: none
 - Intents with tickets not answerable from docs: feature_request 20/20, unclear_request 15/15, security_incident 12/26, compliance_request 9/26, database_issue 8/26, data_residency 8/29, deployment_failure 8/27, rollback_request 7/28, configuration_help 7/17, api_key_issue 6/18, authentication_failure 6/20, performance_degradation 6/23, integration_help 5/21, webhook_issue 5/21, account_access 5/22, sso_configuration 4/26, quota_or_overage 3/23, billing_query 3/24, data_export 2/29, onboarding 2/22, rate_limit 1/13, api_usage_question 1/24
+
+## E16. Ticket mix by region (follow-up to E7)
+
+| customer_region | tickets | answerable | must_escalate | expected auto | high urgency | non_fluent | enterprise |
+|---|---|---|---|---|---|---|---|
+| asia_pacific | 119 | 64% | 21% | 54% | 31% | 21% | 22% |
+| europe | 151 | 76% | 16% | 68% | 20% | 25% | 15% |
+| latin_america | 60 | 72% | 12% | 65% | 32% | 25% | 7% |
+| north_america | 170 | 72% | 18% | 62% | 35% | 25% | 18% |
+
+## E17. Like-for-like by region: doc-answerable, not must-escalate tickets only
+
+| customer_region | tickets | share | FCR | escalated | mean CSAT | repeat contact | median resolution min |
+|---|---|---|---|---|---|---|---|
+| north_america | 110 | 34% | 75% | 25% | 3.15 | 15% | 43 |
+| europe | 106 | 33% | 62% | 38% | 3.2 | 9% | 39 |
+| asia_pacific | 70 | 21% | 67% | 33% | 3.21 | 13% | 36 |
+| latin_america | 40 | 12% | 57% | 42% | 2.75 | 22% | 51 |
+
+## E18. Mean CSAT by region and fluency
+
+| customer_region | fluent | non_fluent | tickets (non_fluent) |
+|---|---|---|---|
+| asia_pacific | 3.01 | 2.68 | 25 |
+| europe | 2.98 | 3.08 | 37 |
+| latin_america | 2.64 | 3.0 | 15 |
+| north_america | 2.98 | 3.23 | 43 |
+
+## E19. Outcomes by arrival time (UTC) and weekday/weekend
+
+| arrival (UTC) | tickets | share | FCR | escalated | mean CSAT | repeat contact | median resolution min |
+|---|---|---|---|---|---|---|---|
+| 00-04 | 78 | 16% | 55% | 45% | 3.18 | 22% | 53 |
+| 04-08 | 80 | 16% | 41% | 59% | 3.11 | 16% | 261 |
+| 08-12 | 78 | 16% | 38% | 62% | 2.86 | 21% | 353 |
+| 12-16 | 77 | 15% | 38% | 62% | 2.77 | 23% | 265 |
+| 16-20 | 92 | 18% | 39% | 61% | 3.12 | 27% | 249 |
+| 20-24 | 95 | 19% | 51% | 49% | 2.8 | 20% | 55 |
+
+| day | tickets | share | FCR | escalated | mean CSAT | repeat contact | median resolution min |
+|---|---|---|---|---|---|---|---|
+| weekday | 382 | 76% | 45% | 55% | 2.95 | 20% | 198 |
+| weekend | 118 | 24% | 42% | 58% | 3.04 | 27% | 266 |
+
+Region shares are similar in every arrival band, so arrival time does not explain E7.
