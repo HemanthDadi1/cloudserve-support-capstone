@@ -86,3 +86,14 @@ def test_numpy_scores_pass_the_confidence_floor():
     d = route({"fallback": False, "p_auto": np.float32(0.95),
                "intent": {"value": "rate_limit", "confidence": np.float64(0.95)}}, HIT, threshold=0.85)
     assert d["action"] == "auto_respond"
+
+
+def test_confident_topic_suggests_its_article_only_when_search_missed_it():
+    c = {**cls(), "topic_article": "DOC-API-001"}
+    assert "topic_article" not in escalation_packet("x", c, HIT, "why")  # search already found it
+    assert escalation_packet("x", c, [], "why")["topic_article"] == "DOC-API-001#resolution"
+    assert "topic_article" not in escalation_packet("x", cls(), [], "why")  # not confident: no suggestion
+
+
+def test_classifier_learns_topic_articles(classifier):
+    assert classifier.topic_article["rate_limit"] == "DOC-API-001"

@@ -62,7 +62,11 @@ def route(cls: dict, hits: list[dict], threshold: float = ROUTE_THRESHOLD, inten
 def escalation_packet(text: str, cls: dict, hits: list[dict], uncertainty: str) -> dict:
     """What travels with an escalation so tier two need not re-ask the customer (FR-06)."""
     # shortcut: the summary is the ticket itself (median ~140 characters); add a model summary if tickets get long.
-    return {"summary": text[:300] or "(empty ticket)",
-            "likely_topic": {k: cls["intent"].get(k) for k in ("value", "confidence", "alternatives")},
-            "articles": [h["chunk_id"] for h in hits[:3]],
-            "uncertainty": uncertainty}
+    packet = {"summary": text[:300] or "(empty ticket)",
+              "likely_topic": {k: cls["intent"].get(k) for k in ("value", "confidence", "alternatives")},
+              "articles": [h["chunk_id"] for h in hits[:3]],
+              "uncertainty": uncertainty}
+    topic = cls.get("topic_article")
+    if topic and topic not in {h["doc_id"] for h in hits}:  # search missed the topic's usual article
+        packet["topic_article"] = f"{topic}#resolution"
+    return packet

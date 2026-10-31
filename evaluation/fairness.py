@@ -48,11 +48,14 @@ def part_a(tickets) -> tuple[str, pd.DataFrame]:
         auto = route(cls, o["hits"][i])["action"] == "auto_respond"
         should_auto = lab["expected_route"] == "auto_respond"
         exp = set(lab["expected_doc_ids"])
+        found = {h["doc_id"] for h in o["hits"][i]}
+        given = found | ({o["topic_article"][i]} if o["topic_article"][i] else set())  # what the agent receives
         rows.append({"customer_tier": t.customer_tier, "language_fluency": t.language_fluency,
                      "customer_region": t.customer_region, "length": len(t.text),
                      "answered": auto, "route_correct": auto == should_auto,
                      "unsafe_send": (auto and not should_auto) if auto else None,
-                     "retrieval_hit": bool(exp & {h["doc_id"] for h in o["hits"][i]}) if exp else None,
+                     "retrieval_hit": bool(exp & found) if exp else None,
+                     "agent_has_article": bool(exp & given) if exp else None,
                      "intent_correct": o["intent"][i] == lab["intent"]})
     df = pd.DataFrame(rows)
     med = statistics.median(df.length)
@@ -68,6 +71,7 @@ def part_a(tickets) -> tuple[str, pd.DataFrame]:
             "sends that should have escalated": g.unsafe_send.apply(
                 lambda s: f"{int(s.dropna().sum())}/{int(s.notna().sum())}"),
             "retrieval hit (answerable)": g.retrieval_hit.apply(lambda s: round(100 * s.dropna().mean(), 1)),
+            "article available to agent": g.agent_has_article.apply(lambda s: round(100 * s.dropna().mean(), 1)),
             "intent accuracy": (100 * g.intent_correct.mean()).round(1),
         })
         tab["routing gap from best (points)"] = (tab["routing correct"].max() - tab["routing correct"]).round(1)
@@ -75,6 +79,7 @@ def part_a(tickets) -> tuple[str, pd.DataFrame]:
         out += [f"### By {fam}\n", table(tab), "",
                 "p-values: answered " + p_value(df, seg, "answered") + "; routing correct " +
                 p_value(df, seg, "route_correct") + "; retrieval hit " + p_value(df, seg, "retrieval_hit") +
+                "; article available " + p_value(df, seg, "agent_has_article") +
                 "; intent " + p_value(df, seg, "intent_correct") + "\n"]
     return "\n".join(out), df
 

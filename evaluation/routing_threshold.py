@@ -11,7 +11,7 @@ import json
 import numpy as np
 from sklearn.model_selection import GroupKFold, cross_val_predict
 
-from src.classify import auto_features, make_model, oof_intent_probs, targets
+from src.classify import TOPIC_ARTICLE_MIN, auto_features, make_model, oof_intent_probs, targets, topic_articles
 from src.ingest import normalize
 from src.retrieve import ROOT, Retriever
 from src.route import route
@@ -34,16 +34,20 @@ def out_of_fold(tickets, r: Retriever) -> dict:
     hits, channels = [r.search(t.text) for t in tickets], np.array([t.channel for t in tickets])
     oof = {k: cross_val_predict(make_model(k), X, y[k], cv=cv, groups=groups, method="predict_proba")
            for k in ("intent", "urgency")}
-    p_auto = np.zeros(len(tickets))
+    p_auto, topic = np.zeros(len(tickets)), [None] * len(tickets)
     for tr, te in cv.split(X, y["auto"], groups):
+        articles = topic_articles([tickets[i] for i in tr])
         F = auto_features(X[tr], oof_intent_probs(X[tr], y["intent"][tr], groups[tr]),
                           [hits[i] for i in tr], channels[tr])
         m = make_model("auto").fit(F, y["auto"][tr])
         intent_te = make_model("intent").fit(X[tr], y["intent"][tr]).predict_proba(X[te])
         p_auto[te] = m.predict_proba(auto_features(X[te], intent_te, [hits[i] for i in te], channels[te]))[:, 1]
+        for i in te:
+            if oof["intent"][i].max() >= TOPIC_ARTICLE_MIN:
+                topic[i] = articles.get(np.unique(y["intent"])[oof["intent"][i].argmax()])
     pred = {k: np.unique(y[k])[oof[k].argmax(1)] for k in ("intent", "urgency")}
     return {"y": y, "oof": oof, "intent": pred["intent"], "urgency": pred["urgency"],
-            "iconf": oof["intent"].max(1), "p_auto": p_auto, "hits": hits}
+            "iconf": oof["intent"].max(1), "p_auto": p_auto, "hits": hits, "topic_article": topic}
 
 
 def main():

@@ -14,6 +14,7 @@ predictions made on tickets the topic model trained on.
 """
 import hashlib
 import json
+from collections import Counter, defaultdict
 import os
 from pathlib import Path
 
@@ -28,6 +29,10 @@ ROOT = Path(__file__).resolve().parent.parent
 TRAIN_PATH = os.getenv("TRAIN_PATH", str(ROOT / "data/development_tickets.json"))
 FALLBACK = {"intent": "unclear_request", "urgency": "medium"}
 CHANNELS = ("email", "chat", "docs_comment", "forum")
+# A confidently predicted topic's most-cited article goes with an escalation when search did not find it.
+# Out-of-fold on dev: right article available to the agent, fluent 95.6% -> 98.1%, non-fluent 88.5% -> 100%
+# (the 7.1-point fairness gap falls to 1.9). For escalations only; answers use search hits alone.
+TOPIC_ARTICLE_MIN = 0.9
 # Regularisation per target, picked for calibration (evaluation/routing_threshold.py): intent at C=10 was
 # underconfident (calibration error 0.185) and at C=1000 is 0.025; urgency at C=10 was overconfident (0.182),
 # at C=1 is 0.037; answer-likelihood with auto_features is 0.067 at C=3 vs 0.080 at C=10.
@@ -50,6 +55,14 @@ def auto_features(X, intent_probs, hits: list[list[dict]], channels: list[str]):
     return np.hstack([X, intent_probs, search, chan])
 
 
+def topic_articles(tickets) -> dict:
+    """Each topic's most-cited article in the training labels."""
+    counts = defaultdict(Counter)
+    for t in tickets:
+        counts[t.raw["labels"]["intent"]].update(t.raw["labels"]["expected_doc_ids"])
+    return {k: c.most_common(1)[0][0] for k, c in counts.items() if c}
+
+
 def oof_intent_probs(X, y_intent, groups):
     """Topic probabilities for training rows from models that did not see their wording."""
     return cross_val_predict(make_model("intent"), X, y_intent, cv=GroupKFold(n_splits=5), groups=groups,
@@ -68,13 +81,14 @@ class Classifier:
         F = auto_features(X, oof_intent_probs(X, y["intent"], [t.body for t in tickets]),
                           [retriever.search(t.text) for t in tickets], [t.channel for t in tickets])
         self.models["auto"] = make_model("auto").fit(F, y["auto"])
+        self.topic_article = topic_articles(tickets)
 
     def embed(self, texts):
         return self.embedder.encode(texts, normalize_embeddings=True)
 
     def classify(self, ticket: Ticket, hits: list[dict]) -> dict:
         if not ticket.text:
-            return {"fallback": True, "p_auto": 0.0,
+            return {"fallback": True, "p_auto": 0.0, "topic_article": None,
                     **{k: {"value": v, "confidence": 0.0, "alternatives": []} for k, v in FALLBACK.items()}}
         x = self.embed([ticket.text])
         probs = {k: self.models[k].predict_proba(x) for k in ("intent", "urgency")}
@@ -84,4 +98,6 @@ class Classifier:
             ranked = sorted(zip(self.models[k].classes_, probs[k][0]), key=lambda p: -p[1])[:3]
             top = [{"value": str(c), "confidence": round(float(p), 4)} for c, p in ranked]
             out[k] = {**top[0], "alternatives": top[1:]}
+        confident = out["intent"]["confidence"] >= TOPIC_ARTICLE_MIN
+        out["topic_article"] = self.topic_article.get(out["intent"]["value"]) if confident else None
         return out
