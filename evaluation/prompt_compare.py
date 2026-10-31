@@ -20,13 +20,8 @@ from src.retrieve import ROOT, Retriever
 from src.route import MUST_ESCALATE
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--baseline", required=True, help="older prompt file, relative to prompts/")
-    ap.add_argument("--per-group", type=int, default=12)
-    a = ap.parse_args()
-    load_dotenv()
-    r = Retriever()
+def candidate_groups(r: Retriever) -> dict:
+    """Distinct dev tickets that could reach drafting, split by label and shuffled with a fixed seed."""
     seen, groups = set(), {"should answer": [], "should refuse": []}
     for raw in json.loads((ROOT / "data/development_tickets.json").read_text()):
         t = normalize(raw)
@@ -46,6 +41,17 @@ def main():
             groups[key].append((t, hits))
     random.Random(7).shuffle(groups["should answer"])
     random.Random(7).shuffle(groups["should refuse"])
+    return groups
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--baseline", required=True, help="older prompt file, relative to prompts/")
+    ap.add_argument("--per-group", type=int, default=12)
+    a = ap.parse_args()
+    load_dotenv()
+    r = Retriever()
+    groups = candidate_groups(r)
     versions = {"baseline": load_prompt(a.baseline), "current": PROMPT}
     print("Distinct dev tickets reaching drafting: " + ", ".join(f"{k} {len(v)}" for k, v in groups.items()))
     print(f"{'group':14s} {'version':10s} answered  insufficient  other")

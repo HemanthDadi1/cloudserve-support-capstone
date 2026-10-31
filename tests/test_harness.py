@@ -7,11 +7,11 @@ from tests.test_setup import DATA
 
 
 def fake_model(system, user):
-    """PR-01: answer citing the first passage given. PR-02: mark every sentence supported."""
-    if "fact checker" in system:
+    """PR-01: answer citing the first passage given. PR-02: every sentence supported, no person needed."""
+    if "<sentences>" in user:
         n = len(re.findall(r"^\d+\. ", user, re.M))
-        return {"content": json.dumps({"results": [{"i": i, "verdict": "supported", "reason": ""}
-                                                   for i in range(n)]}), "model": "fake"}
+        return {"content": json.dumps({"results": [{"i": i, "verdict": "supported", "reason": ""} for i in range(n)],
+                                       "needs_person": False}), "model": "fake"}
     pid = re.search(r'<passage id="([^"]+)"', user).group(1)
     return {"content": json.dumps({"status": "answered", "sentences": [{"text": "Follow the steps.", "cite": [pid]}]}),
             "model": "fake"}

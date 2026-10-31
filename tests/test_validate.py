@@ -4,7 +4,7 @@ import re
 import pytest
 
 from src.ingest import normalize
-from src.llm import LLMUnavailable
+from src.llm import LLMUnavailable, load_prompt
 from src.validate import find_commitments, validate
 from tests.test_setup import DATA
 
@@ -13,13 +13,15 @@ TICKET = normalize({"ticket_id": "T-9", "customer_id": "CUST-1042", "customer_na
 PASSAGES = [{"chunk_id": "DOC-API-001#resolution", "text": "Limits apply per organisation. Retry with backoff."}]
 
 
-def judge(*verdicts, raw=None):
+def judge(*verdicts, raw=None, needs_person=False):
     def llm(system, user):
         llm.calls += 1
         if isinstance(raw, Exception):
             raise raw
-        return {"content": raw if isinstance(raw, str) else json.dumps(
-            {"results": [{"i": i, "verdict": v, "reason": ""} for i, v in enumerate(verdicts)]}), "model": "fake"}
+        body = {"results": [{"i": i, "verdict": v, "reason": ""} for i, v in enumerate(verdicts)]}
+        if needs_person is not None:
+            body.update(needs_person=needs_person, needs_person_reason="customer already tried this")
+        return {"content": raw if isinstance(raw, str) else json.dumps(body), "model": "fake"}
     llm.calls = 0
     return llm
 
@@ -31,7 +33,27 @@ def draft(*texts):
 def test_clean_grounded_draft_passes():
     out = validate(draft("Limits apply per organisation.", "Thanks for asking."), TICKET, PASSAGES,
                    llm=judge("supported", "no_claim"))
-    assert out["passed"] and out["checks"] == {"pii": "pass", "commitments": "pass", "grounding": "pass"}
+    # Live PR-02 is v1.0, which does not ask the FR-13 relevance question (v1.1 tested, not adopted).
+    assert out["passed"] and out["checks"] == {"pii": "pass", "commitments": "pass", "grounding": "pass",
+                                               "relevance": "skipped"}
+    assert out["prompt_version"] == "PR-02 v1.0"
+
+
+V11 = load_prompt("history/PR-02_grounding_v1.1_not_adopted.txt")  # FR-13 check, kept switchable
+
+
+def test_v1_1_blocks_a_ticket_that_needs_a_person_with_the_reason():
+    out = validate(draft("Limits apply per organisation."), TICKET, PASSAGES, llm=judge("supported", needs_person=True),
+                   prompt=V11)
+    assert not out["passed"] and out["checks"]["relevance"] == "fail"
+    assert "needs a person (customer already tried this)" in out["blocked_reason"]
+
+
+def test_v1_1_missing_needs_person_field_fails_closed():
+    out = validate(draft("Limits apply per organisation."), TICKET, PASSAGES, llm=judge("supported", needs_person=None),
+                   prompt=V11)
+    assert not out["passed"] and out["checks"] == {"pii": "pass", "commitments": "pass", "grounding": "pass",
+                                                   "relevance": "fail"}
 
 
 @pytest.mark.parametrize("text, kind", [

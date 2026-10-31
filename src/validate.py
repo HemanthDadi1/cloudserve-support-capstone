@@ -1,7 +1,8 @@
-"""Validate: check every draft before release and block it on any failure (FR-08).
+"""Validate: check every draft before release and block it on any failure (FR-08, FR-13).
 
-Checks run cheapest first: private data, forbidden commitments, then grounding with prompt PR-02.
-Grounding fails closed: if it cannot run or its output is unusable, the draft is blocked.
+Checks run cheapest first: private data, forbidden commitments, then prompt PR-02, which judges grounding
+and (from v1.1) whether the ticket needs a person anyway. Both fail closed: if PR-02 cannot run or its
+output is unusable, the draft is blocked.
 The commitment patterns cover the three must_not_claim phrases in every reference answer
 (a refund issued, a fix on our side, a delivery date) plus data-location promises (FR-04, Daniel).
 """
@@ -49,39 +50,56 @@ def find_commitments(text: str) -> list[str]:
     return [kind for kind, p in COMMITMENTS.items() if re.search(p, text, re.I)]
 
 
-def check_grounding(sentences: list[dict], passages: list[dict], llm) -> tuple[str, list, str | None]:
+def review(sentences: list[dict], ticket: Ticket, passages: list[dict], llm, prompt: dict) -> dict:
+    """PR-02: grounding per sentence (FR-08) and, from v1.1, whether the ticket needs a person anyway (FR-13).
+    Fails closed: unavailable or malformed output fails every check it should have answered."""
+    asks_relevance = "{ticket}" in prompt["user"]
     cited = {c for s in sentences for c in s["cite"]}
-    user = render(PROMPT["user"],
+    user = render(prompt["user"], ticket=ticket.text.replace("</ticket>", ""),
                   passages="\n".join(f'<passage id="{p["chunk_id"]}">{p["text"]}</passage>'
                                      for p in passages if p["chunk_id"] in cited),
                   sentences="\n".join(f"{i}. {s['text']} (cites: {', '.join(s['cite'])})"
                                       for i, s in enumerate(sentences)))
+    out = {"grounding": "fail", "relevance": "fail" if asks_relevance else "skipped", "verdicts": [], "model": None,
+           "needs_person_reason": None}
     try:
-        res = llm(PROMPT["system"], user)
-        verdicts = [r["verdict"] for r in json.loads(res["content"])["results"]]
+        res = llm(prompt["system"], user)
     except LLMUnavailable:
-        return "fail", [], None
+        return out
+    out["model"] = res["model"]
+    try:
+        body = json.loads(res["content"])
+        out["verdicts"] = [r["verdict"] for r in body["results"]]
+        needs = body.get("needs_person")
     except (ValueError, KeyError, TypeError):
-        return "fail", [], res.get("model")
-    if len(verdicts) != len(sentences) or not set(verdicts) <= {"supported", "unsupported", "no_claim"}:
-        return "fail", verdicts, res.get("model")
-    return ("fail" if "unsupported" in verdicts else "pass"), verdicts, res["model"]
+        return out
+    if len(out["verdicts"]) == len(sentences) and set(out["verdicts"]) <= {"supported", "unsupported", "no_claim"}:
+        out["grounding"] = "fail" if "unsupported" in out["verdicts"] else "pass"
+    if asks_relevance and isinstance(needs, bool):
+        out["relevance"] = "fail" if needs else "pass"
+        out["needs_person_reason"] = body.get("needs_person_reason") if needs else None
+    return out
 
 
-def validate(sentences: list[dict], ticket: Ticket, passages: list[dict], llm=complete) -> dict:
+def validate(sentences: list[dict], ticket: Ticket, passages: list[dict], llm=complete, prompt: dict = PROMPT) -> dict:
     text = " ".join(s["text"] for s in sentences)
     private, commitments = find_private(text, ticket), find_commitments(text)
-    out = {"prompt_version": f"{PROMPT['id']} v{PROMPT['version']}", "model": None, "verdicts": [],
-           "found": {"private": private, "commitments": commitments},
+    out = {"prompt_version": f"{prompt['id']} v{prompt['version']}", "model": None, "verdicts": [],
+           "found": {"private": private, "commitments": commitments}, "needs_person_reason": None,
            "checks": {"pii": "fail" if private else "pass", "commitments": "fail" if commitments else "pass",
-                      "grounding": "skipped"}}
+                      "grounding": "skipped", "relevance": "skipped"}}
     if not (private or commitments):  # skip the model call when the draft is already blocked
-        out["checks"]["grounding"], out["verdicts"], out["model"] = check_grounding(sentences, passages, llm)
+        r = review(sentences, ticket, passages, llm, prompt)
+        out["checks"]["grounding"], out["checks"]["relevance"] = r["grounding"], r["relevance"]
+        out["verdicts"], out["model"], out["needs_person_reason"] = r["verdicts"], r["model"], r["needs_person_reason"]
     reasons = ([f"private data ({', '.join(private)})"] if private else []) + \
               ([f"forbidden commitment ({', '.join(commitments)})"] if commitments else [])
     if out["checks"]["grounding"] == "fail":
         reasons.append("a sentence is not supported by its sources" if "unsupported" in out["verdicts"]
                        else "grounding could not be checked")
+    if out["checks"]["relevance"] == "fail":
+        reasons.append(f"the ticket needs a person ({out['needs_person_reason']})" if out["needs_person_reason"]
+                       else "relevance could not be checked")
     out["passed"] = not reasons
     out["blocked_reason"] = "; ".join(reasons) or None
     return out
