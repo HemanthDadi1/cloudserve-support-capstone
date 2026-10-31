@@ -19,7 +19,7 @@ class Resp:
 @pytest.fixture
 def offline(monkeypatch, tmp_path):
     monkeypatch.setattr(llm, "CACHE", tmp_path)
-    monkeypatch.setattr(llm, "EXHAUSTED", set())
+    monkeypatch.setattr(llm, "EXHAUSTED", {})
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     monkeypatch.setenv("GROQ_API_KEY", "groq-key")
     monkeypatch.setenv("MODEL_NAME", "primary")
@@ -75,6 +75,14 @@ def test_daily_cap_skips_the_provider_for_the_rest_of_the_run(offline, monkeypat
     assert llm.complete("s", "u6", sleep=pytest.fail)["model"] == "groq:llama-test"
     assert llm.complete("s", "u7", sleep=pytest.fail)["model"] == "groq:llama-test"
     assert calls[0] == "primary" and all(c.startswith("groq:") for c in calls[1:])  # backup1 never tried
+
+
+def test_rejected_key_disables_the_provider_without_waiting(offline, monkeypatch):
+    monkeypatch.setenv("MODEL_FALLBACKS", "backup1,groq:llama-test")
+    calls = offline(Resp(401), Resp(401))  # OpenRouter placeholder key, then Groq placeholder key
+    with pytest.raises(llm.LLMUnavailable, match="GROQ_API_KEY rejected"):
+        llm.complete("s", "u8", sleep=pytest.fail)
+    assert calls == ["primary", "groq:llama-test:Bearer groq-key"]  # backup1 skipped, no second pass
 
 
 def test_missing_key_is_unavailable_not_a_crash(offline, monkeypatch):

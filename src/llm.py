@@ -23,7 +23,7 @@ PROMPTS = ROOT / "prompts"
 CACHE = Path(os.getenv("LLM_CACHE_PATH", str(ROOT / "storage/llm_cache")))
 PROVIDERS = {"openrouter": ("https://openrouter.ai/api/v1/chat/completions", "OPENROUTER_API_KEY"),
              "groq": ("https://api.groq.com/openai/v1/chat/completions", "GROQ_API_KEY")}
-EXHAUSTED: set[str] = set()  # providers whose daily cap was hit during this process
+EXHAUSTED: dict[str, str] = {}  # provider -> why it is unusable for the rest of this process
 # Each model is tried once per pass; when every model is busy, wait (retry-after, capped) and pass again.
 # Groq free tier: 1,000 requests/day but 8,000 tokens/minute per model, i.e. ~3 calls/minute each.
 PASSES, TIMEOUT, MAX_WAIT = 2, 60, 60
@@ -72,7 +72,7 @@ def complete(system: str, user: str, sleep=time.sleep) -> dict:
             url, key_var = PROVIDERS[prov]
             key = os.getenv(key_var)
             if not key or prov in EXHAUSTED:
-                errors[model] = "daily cap reached" if key else f"{key_var} not set"
+                errors[model] = EXHAUSTED.get(prov) or f"{key_var} not set"
                 continue
             try:
                 r = requests.post(url, timeout=TIMEOUT, headers={"Authorization": f"Bearer {key}"}, json={
@@ -80,8 +80,10 @@ def complete(system: str, user: str, sleep=time.sleep) -> dict:
                     "response_format": {"type": "json_object"},
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]})
                 if r.status_code == 429 and re.search(r"per[- ]day", r.text):  # OpenRouter / Groq wording
-                    EXHAUSTED.add(prov)
-                    errors[model] = "daily cap reached"
+                    errors[model] = EXHAUSTED[prov] = "daily cap reached"
+                    continue
+                if r.status_code in (401, 403):  # missing or placeholder key: no other model there will work
+                    errors[model] = EXHAUSTED[prov] = f"{key_var} rejected (HTTP {r.status_code})"
                     continue
                 if r.status_code == 429 or r.status_code >= 500:  # busy or down: move on to the next model
                     errors[model] = f"HTTP {r.status_code}"

@@ -6,5 +6,5 @@ __pycache__/
 .coverage
 chroma_db/
 *.db
-evaluation/results/
+evaluation/results*/
 storage/
