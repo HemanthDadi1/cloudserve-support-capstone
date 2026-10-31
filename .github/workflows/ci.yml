@@ -30,6 +30,18 @@ jobs:
         run: python -m flake8 --max-line-length 120 src tests evaluation discovery
       - name: Tests
         run: python -m pytest tests/ -v
+      # The gate on a machine that is not the author's: the full validation set, unattended, with no API keys
+      # (every ticket that would be answered escalates instead), then the report must reconcile.
+      - name: Unattended run over the validation set (no keys)
+        run: |
+          python -m evaluation.harness --input data/validation_tickets.json --output ci-results/
+          python -c "import json; m = json.load(open('ci-results/metrics.json')); v, g = m['volume'], m['governance']; assert v['processed'] == 80 and v['errors'] == 0 and g['log_reconciles'], (v, g); print('gate ok:', v, 'log reconciles:', g['log_reconciles'])"
+      - name: Keep the run report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-harness-results
+          path: ci-results/
 
   secrets:
     runs-on: ubuntu-latest

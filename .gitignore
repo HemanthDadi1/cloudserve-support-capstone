@@ -8,3 +8,4 @@ chroma_db/
 *.db
 evaluation/results*/
 storage/
+ci-results/
