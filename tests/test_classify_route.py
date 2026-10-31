@@ -4,10 +4,10 @@ import pytest
 
 from src.decision_log import DecisionLog
 from src.ingest import normalize
-from src.route import route
+from src.route import escalation_packet, route
 from tests.test_setup import DATA
 
-HIT = [{"doc_id": "DOC-API-001", "score": 0.7}]
+HIT = [{"doc_id": "DOC-API-001", "chunk_id": "DOC-API-001#symptoms", "score": 0.7}]
 
 
 def cls(intent="rate_limit", conf=0.95, p_auto=0.95, fallback=False):
@@ -46,6 +46,12 @@ def test_routing_rules(kwargs, hits, expected):
     decision = route(cls(**kwargs), hits, threshold=0.85)
     assert decision["action"] == expected and decision["reason"]
     assert decision["requirement_ids"] and all(r.startswith("FR-") for r in decision["requirement_ids"])
+
+
+def test_escalation_packet_has_all_four_fields():
+    p = escalation_packet("Data export keeps failing", cls(), HIT, "Only 60% likely answerable.")
+    assert p["summary"] and p["likely_topic"]["value"] == "rate_limit" and p["articles"] and p["uncertainty"]
+    assert escalation_packet("", cls(), [], "x")["summary"] == "(empty ticket)"
 
 
 def test_decision_log_round_trip(tmp_path):

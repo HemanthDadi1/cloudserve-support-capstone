@@ -33,3 +33,12 @@ def route(cls: dict, hits: list[dict], threshold: float = ROUTE_THRESHOLD, inten
     return {"action": "auto_respond", "threshold_applied": threshold, "requirement_ids": ["FR-05"],
             "reason": f"Recognised as '{intent}' ({conf:.0%} confident), {p:.0%} likely answerable from "
                       f"{hits[0]['doc_id']}."}
+
+
+def escalation_packet(text: str, cls: dict, hits: list[dict], uncertainty: str) -> dict:
+    """What travels with an escalation so tier two need not re-ask the customer (FR-06)."""
+    # shortcut: the summary is the ticket itself (median ~140 characters); add a model summary if tickets get long.
+    return {"summary": text[:300] or "(empty ticket)",
+            "likely_topic": {k: cls["intent"].get(k) for k in ("value", "confidence", "alternatives")},
+            "articles": [h["chunk_id"] for h in hits[:3]],
+            "uncertainty": uncertainty}
