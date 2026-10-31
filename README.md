@@ -1,5 +1,7 @@
 # CloudServe Support
 
+[![CI](https://github.com/HemanthDadi1/cloudserve-support-capstone/actions/workflows/ci.yml/badge.svg)](https://github.com/HemanthDadi1/cloudserve-support-capstone/actions/workflows/ci.yml)
+
 Ticket triage and grounded answering for CloudServe Solutions (FDE capstone).
 
 ## Setup
