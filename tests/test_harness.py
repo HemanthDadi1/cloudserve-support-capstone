@@ -1,0 +1,43 @@
+import json
+import re
+
+from evaluation.harness import run
+from src.llm import LLMUnavailable
+from tests.test_setup import DATA
+
+
+def fake_model(system, user):
+    """PR-01: answer citing the first passage given. PR-02: mark every sentence supported."""
+    if "fact checker" in system:
+        n = len(re.findall(r"^\d+\. ", user, re.M))
+        return {"content": json.dumps({"results": [{"i": i, "verdict": "supported", "reason": ""}
+                                                   for i in range(n)]}), "model": "fake"}
+    pid = re.search(r'<passage id="([^"]+)"', user).group(1)
+    return {"content": json.dumps({"status": "answered", "sentences": [{"text": "Follow the steps.", "cite": [pid]}]}),
+            "model": "fake"}
+
+
+def down(system, user):
+    raise LLMUnavailable("provider disconnected")
+
+
+def tickets(tmp_path):
+    rows = json.loads((DATA / "validation_tickets.json").read_text())[:12] + [{"body": None}, "not a ticket"]
+    path = tmp_path / "tickets.json"
+    path.write_text(json.dumps(rows))
+    return path
+
+
+def test_full_run_processes_every_ticket_and_reconciles(tmp_path):
+    m = run(str(tickets(tmp_path)), str(tmp_path / "out"), llm=fake_model)
+    lines = (tmp_path / "out" / "results.jsonl").read_text().splitlines()
+    assert len(lines) == m["volume"]["processed"] == 14
+    assert m["volume"]["auto_answered"] + m["volume"]["escalated"] == 14
+    assert m["governance"]["log_reconciles"] and m["technical"]["routing"]["sent_but_must_not_auto"] == 0
+    assert (tmp_path / "out" / "metrics.md").read_text().startswith("# Metrics report")
+
+
+def test_provider_outage_escalates_everything_without_stopping(tmp_path):
+    m = run(str(tickets(tmp_path)), str(tmp_path / "out"), llm=down)
+    assert m["volume"]["processed"] == 14 and m["volume"]["auto_answered"] == 0
+    assert m["governance"]["log_reconciles"]
