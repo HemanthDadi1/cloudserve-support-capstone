@@ -42,13 +42,13 @@ def parse(raw: str, allowed: set[str]) -> dict | None:
     return {"status": out["status"], "sentences": sentences if out["status"] == "answered" else []}
 
 
-def generate(ticket: Ticket, hits: list[dict], retriever, llm=complete) -> dict:
+def generate(ticket: Ticket, hits: list[dict], retriever, llm=complete, prompt: dict = PROMPT) -> dict:
     passages = passages_for(hits, retriever)
-    user = render(PROMPT["user"], ticket=ticket.text.replace("</ticket>", ""),
+    user = render(prompt["user"], ticket=ticket.text.replace("</ticket>", ""),
                   passages="\n".join(f'<passage id="{p["chunk_id"]}">{p["text"]}</passage>' for p in passages))
-    base = {"prompt_version": f"{PROMPT['id']} v{PROMPT['version']}", "passages": [p["chunk_id"] for p in passages]}
+    base = {"prompt_version": f"{prompt['id']} v{prompt['version']}", "passages": [p["chunk_id"] for p in passages]}
     try:
-        res = llm(PROMPT["system"], user)
+        res = llm(prompt["system"], user)
     except LLMUnavailable as e:
         return {**base, "status": "unavailable", "sentences": [], "error": str(e)}
     raw, base["model"] = res["content"], res["model"]
