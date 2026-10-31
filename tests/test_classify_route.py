@@ -37,6 +37,7 @@ def test_empty_ticket_falls_back_and_escalates(classifier):
 @pytest.mark.parametrize("kwargs, hits, expected", [
     ({}, HIT, "auto_respond"),
     ({"intent": "security_incident"}, HIT, "escalate"),
+    ({"intent": "data_residency"}, HIT, "escalate"),
     ({"conf": 0.3}, HIT, "escalate"),
     ({}, [], "escalate"),
     ({"p_auto": 0.5}, HIT, "escalate"),
@@ -44,6 +45,7 @@ def test_empty_ticket_falls_back_and_escalates(classifier):
 def test_routing_rules(kwargs, hits, expected):
     decision = route(cls(**kwargs), hits, threshold=0.85)
     assert decision["action"] == expected and decision["reason"]
+    assert decision["requirement_ids"] and all(r.startswith("FR-") for r in decision["requirement_ids"])
 
 
 def test_decision_log_round_trip(tmp_path):
