@@ -46,6 +46,18 @@ python -m evaluation.harness --input data/validation_tickets.json --output evalu
 If the model provider is down, tickets that would have been answered are escalated with context instead;
 the run still completes. The 80 validation tickets take about 2 minutes on a laptop.
 
+## Kill switch
+
+Stops all automated replies immediately, with no restart or deployment:
+
+```bash
+touch storage/AUTOMATION_OFF
+```
+
+While that file exists, every ticket is escalated to a person with its context, including any ticket already
+being drafted (checked again just before sending). Delete the file to resume. Every decision taken while it is
+on is logged with requirement `GOV-KILL-SWITCH`. Set `KILL_SWITCH_PATH` to use a different file.
+
 ## Configuration
 
 Set in `.env` (see `.env.example`): `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `MODEL_NAME` and `MODEL_FALLBACKS`

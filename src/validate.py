@@ -36,6 +36,16 @@ COMMITMENTS = {
                      r"(?:stored|hosted|kept|processed) (?:only )?in (?:the )?"
                      r"(?:eu|europe|us|usa|united states|uk|asia|apac|region))\b",
 }
+# Instruction integrity (Governance Framework section 4): a ticket that tries to instruct the system is blocked
+# and recorded for review, even though PR-01 already treats ticket text as data. None of the 580 dev and
+# validation tickets match these patterns.
+INJECTION = (r"\b(ignore|disregard|forget|override)\b[^.]{0,40}\b(instructions?|rules|prompt|guidelines)\b|"
+             r"\b(system|developer|hidden) prompt\b|\byou are now\b|\b(admin|developer|god|jailbreak) mode\b|"
+             r"\b(reveal|print|show|repeat)\b[^.]{0,30}\b(prompt|instructions)\b|\bact as\b|\bpretend (to be|you)\b")
+
+
+def find_injection(text: str) -> list[str]:
+    return [m.group(0) for m in re.finditer(INJECTION, text, re.I)]
 
 
 def find_private(text: str, ticket: Ticket) -> list[str]:
@@ -83,16 +93,18 @@ def review(sentences: list[dict], ticket: Ticket, passages: list[dict], llm, pro
 
 def validate(sentences: list[dict], ticket: Ticket, passages: list[dict], llm=complete, prompt: dict = PROMPT) -> dict:
     text = " ".join(s["text"] for s in sentences)
-    private, commitments = find_private(text, ticket), find_commitments(text)
+    private, commitments, injection = find_private(text, ticket), find_commitments(text), find_injection(ticket.text)
     out = {"prompt_version": f"{prompt['id']} v{prompt['version']}", "model": None, "verdicts": [],
-           "found": {"private": private, "commitments": commitments}, "needs_person_reason": None,
-           "checks": {"pii": "fail" if private else "pass", "commitments": "fail" if commitments else "pass",
-                      "grounding": "skipped", "relevance": "skipped"}}
-    if not (private or commitments):  # skip the model call when the draft is already blocked
+           "found": {"private": private, "commitments": commitments, "injection": injection},
+           "needs_person_reason": None,
+           "checks": {"instruction": "fail" if injection else "pass", "pii": "fail" if private else "pass",
+                      "commitments": "fail" if commitments else "pass", "grounding": "skipped", "relevance": "skipped"}}
+    if not (private or commitments or injection):  # skip the model call when the draft is already blocked
         r = review(sentences, ticket, passages, llm, prompt)
         out["checks"]["grounding"], out["checks"]["relevance"] = r["grounding"], r["relevance"]
         out["verdicts"], out["model"], out["needs_person_reason"] = r["verdicts"], r["model"], r["needs_person_reason"]
-    reasons = ([f"private data ({', '.join(private)})"] if private else []) + \
+    reasons = ([f"the ticket tries to instruct the system ({'; '.join(injection)})"] if injection else []) + \
+              ([f"private data ({', '.join(private)})"] if private else []) + \
               ([f"forbidden commitment ({', '.join(commitments)})"] if commitments else [])
     if out["checks"]["grounding"] == "fail":
         reasons.append("a sentence is not supported by its sources" if "unsupported" in out["verdicts"]

@@ -87,9 +87,9 @@ def compute(results: list[dict], log_rows: list[dict]) -> dict:
         "log_reconciles": (len(by_ticket) == len({r["ticket_id"] for r in results})
                            and all(v == 1 for v in by_ticket.values())),
         "guardrail_activations": {k: sum(c.get(k) == "fail" for c in checks)
-                                  for k in ("pii", "commitments", "grounding", "relevance")},
-        "private_data_detections": sum(c["pii"] == "fail" for c in checks),
-        "private_data_in_sent_replies": sum(r["validation"]["checks"]["pii"] == "fail" for r in sent),
+                                  for k in ("instruction", "pii", "commitments", "grounding", "relevance")},
+        "private_data_detections": sum(c.get("pii") == "fail" for c in checks),
+        "private_data_in_sent_replies": sum(r["validation"]["checks"].get("pii") == "fail" for r in sent),
         "blocked_reasons": dict(Counter(r["validation"]["blocked_reason"] for r in results
                                         if r["final"] == "block")),
     }
@@ -144,9 +144,9 @@ def to_markdown(m: dict, source: str) -> str:
               f"| Decisions logged | {g['decisions_logged']} |",
               f"| Tickets with a routing decision | {g['tickets_with_routing_decision']} |",
               f"| Log reconciles with tickets processed | {g['log_reconciles']} |",
-              f"| Guardrail activations (pii / commitments / grounding / relevance) | "
-              f"{g['guardrail_activations']['pii']} / {g['guardrail_activations']['commitments']} / "
-              f"{g['guardrail_activations']['grounding']} / {g['guardrail_activations']['relevance']} |",
+              "| Guardrail activations (instruction / pii / commitments / grounding / relevance) | "
+              + " / ".join(str(g["guardrail_activations"][k])
+                           for k in ("instruction", "pii", "commitments", "grounding", "relevance")) + " |",
               f"| Private data detections / in sent replies | {g['private_data_detections']} / "
               f"{g['private_data_in_sent_replies']} |",
               f"| Blocked reasons | {g['blocked_reasons'] or 'none'} |",

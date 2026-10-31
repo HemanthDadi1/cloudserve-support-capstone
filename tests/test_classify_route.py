@@ -62,3 +62,19 @@ def test_decision_log_round_trip(tmp_path):
     assert row["prediction"]["confidence"] == 0.9 and row["decision_id"] and row["timestamp"]
     with pytest.raises(AssertionError):
         log.write(ticket_id="T-2", not_a_field=1)
+
+
+def test_kill_switch_escalates_everything(monkeypatch, tmp_path):
+    switch = tmp_path / "AUTOMATION_OFF"
+    monkeypatch.setattr("src.route.KILL_SWITCH", switch)
+    assert route(cls(), HIT)["action"] == "auto_respond"
+    switch.touch()  # takes effect on the next ticket, no restart
+    d = route(cls(), HIT)
+    assert d["action"] == "escalate" and "kill switch" in d["reason"] and d["requirement_ids"] == ["GOV-KILL-SWITCH"]
+
+
+@pytest.mark.parametrize("bad", [None, float("nan"), "0.9", True])
+def test_missing_or_invalid_confidence_escalates(bad):
+    d = route(cls(p_auto=bad), HIT)
+    assert d["action"] == "escalate" and "GOV-CONFIDENCE-FLOOR" in d["requirement_ids"]
+    assert route({"fallback": False, "p_auto": 0.99}, HIT)["action"] == "escalate"  # no intent block at all

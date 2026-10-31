@@ -21,8 +21,8 @@ from src.generate import generate, passages_for, reply_text
 from src.ingest import normalize
 from src.llm import complete
 from src.retrieve import Retriever
-from src.route import escalation_packet, route
-from src.validate import validate
+from src.route import KILL_SWITCH, escalation_packet, route
+from src.validate import find_injection, validate
 
 MODEL = "all-MiniLM-L6-v2 + LogisticRegression"
 
@@ -30,7 +30,13 @@ MODEL = "all-MiniLM-L6-v2 + LogisticRegression"
 def process(t, retriever, classifier, log, llm) -> dict:
     cls = classifier.classify(t)
     hits = retriever.search(t.text)
-    d = route(cls, hits)
+    injection = find_injection(t.text)
+    if injection:  # instruction integrity: block and record every attempt, whatever routing would decide
+        reason = f"The ticket tries to instruct the system ({'; '.join(injection)}); recorded for review."
+        d = {"action": "block", "reason": reason, "threshold_applied": None,
+             "requirement_ids": ["GOV-INSTRUCTION-INTEGRITY"]}
+    else:
+        d = route(cls, hits)
     common = {"ticket_id": t.ticket_id, "input_summary": t.text[:200]}
     log.write(**common, stage="routing", model={"name": MODEL, "version": classifier.version},
               prediction={"value": cls["intent"]["value"], "confidence": cls["intent"]["confidence"],
@@ -38,9 +44,14 @@ def process(t, retriever, classifier, log, llm) -> dict:
               alternatives=cls["intent"]["alternatives"],
               sources_used=[{"doc_id": h["chunk_id"], "score": h["score"]} for h in hits],
               threshold_applied=d["threshold_applied"], action_taken=d["action"], reason=d["reason"],
+              guardrail_results={"instruction": "fail"} if injection else None,
               requirement_ids=d["requirement_ids"] + ["FR-10"])
     out = {"classification": cls, "route": d, "hits": [h["chunk_id"] for h in hits], "generation": None,
            "validation": None}
+    if injection:
+        out["validation"] = {"checks": {"instruction": "fail"}, "verdicts": [], "blocked_reason": reason,
+                             "found": {"injection": injection}}
+        return {**out, "final": "block", "packet": escalation_packet(t.text, cls, hits, f"Blocked: {reason}")}
     if d["action"] == "escalate":
         return {**out, "final": "escalate", "packet": escalation_packet(t.text, cls, hits, d["reason"])}
 
@@ -64,6 +75,11 @@ def process(t, retriever, classifier, log, llm) -> dict:
               action_taken=action, reason=v["blocked_reason"] or "All release checks passed.",
               guardrail_results=v["checks"], prompt_version=v["prompt_version"],
               requirement_ids=["FR-08", "FR-10"] + (["FR-09"] if v["passed"] else []))
+    if v["passed"] and KILL_SWITCH.exists():  # switched off while this ticket was being drafted
+        reason = "Automated replies were switched off (kill switch) before this reply was sent."
+        log.write(**common, stage="validation", action_taken="escalate", reason=reason,
+                  requirement_ids=["GOV-KILL-SWITCH", "FR-10"])
+        return {**out, "final": "escalate", "packet": escalation_packet(t.text, cls, hits, reason)}
     if v["passed"]:
         return {**out, "final": "auto_respond", "reply": reply_text(g["sentences"])}
     return {**out, "final": "block", "packet": escalation_packet(t.text, cls, hits, f"Blocked: {v['blocked_reason']}")}
