@@ -11,7 +11,7 @@ import json
 import numpy as np
 from sklearn.model_selection import GroupKFold, cross_val_predict
 
-from src.classify import make_model, targets
+from src.classify import auto_features, make_model, oof_intent_probs, targets
 from src.ingest import normalize
 from src.retrieve import ROOT, Retriever
 from src.route import route
@@ -26,14 +26,24 @@ def ece(conf, correct, bins=10):
 
 
 def out_of_fold(tickets, r: Retriever) -> dict:
-    """Per-ticket predictions from models that never saw that ticket's wording, plus its search hits."""
+    """Per-ticket predictions from models that never saw that ticket's wording, plus its search hits.
+    The answer-likelihood model is rebuilt exactly as Classifier builds it, inside each fold."""
     X = r.model.encode([t.text for t in tickets], normalize_embeddings=True)
-    groups, cv = [t.body for t in tickets], GroupKFold(n_splits=5)
+    groups, cv = np.array([t.body for t in tickets]), GroupKFold(n_splits=5)
     y = {k: np.array([targets(t)[k] for t in tickets]) for k in ("intent", "urgency", "auto")}
-    oof = {k: cross_val_predict(make_model(k), X, y[k], cv=cv, groups=groups, method="predict_proba") for k in y}
+    hits, channels = [r.search(t.text) for t in tickets], np.array([t.channel for t in tickets])
+    oof = {k: cross_val_predict(make_model(k), X, y[k], cv=cv, groups=groups, method="predict_proba")
+           for k in ("intent", "urgency")}
+    p_auto = np.zeros(len(tickets))
+    for tr, te in cv.split(X, y["auto"], groups):
+        F = auto_features(X[tr], oof_intent_probs(X[tr], y["intent"][tr], groups[tr]),
+                          [hits[i] for i in tr], channels[tr])
+        m = make_model("auto").fit(F, y["auto"][tr])
+        intent_te = make_model("intent").fit(X[tr], y["intent"][tr]).predict_proba(X[te])
+        p_auto[te] = m.predict_proba(auto_features(X[te], intent_te, [hits[i] for i in te], channels[te]))[:, 1]
     pred = {k: np.unique(y[k])[oof[k].argmax(1)] for k in ("intent", "urgency")}
     return {"y": y, "oof": oof, "intent": pred["intent"], "urgency": pred["urgency"],
-            "iconf": oof["intent"].max(1), "p_auto": oof["auto"][:, 1], "hits": [r.search(t.text) for t in tickets]}
+            "iconf": oof["intent"].max(1), "p_auto": p_auto, "hits": hits}
 
 
 def main():

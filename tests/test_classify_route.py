@@ -14,8 +14,9 @@ def cls(intent="rate_limit", conf=0.95, p_auto=0.95, fallback=False):
     return {"fallback": fallback, "p_auto": p_auto, "intent": {"value": intent, "confidence": conf}}
 
 
-def test_classification_has_class_confidence_and_alternatives(classifier):
-    out = classifier.classify(normalize({"body": "We get 429 Too Many Requests from the API every afternoon"}))
+def test_classification_has_class_confidence_and_alternatives(classifier, retriever):
+    t = normalize({"body": "We get 429 Too Many Requests from the API every afternoon"})
+    out = classifier.classify(t, retriever.search(t.text))
     for k in ("intent", "urgency"):
         assert isinstance(out[k]["value"], str) and 0 <= out[k]["confidence"] <= 1
         assert len(out[k]["alternatives"]) == 2
@@ -24,12 +25,12 @@ def test_classification_has_class_confidence_and_alternatives(classifier):
 
 def test_same_ticket_same_decision(classifier, retriever):
     t = normalize(json.loads((DATA / "validation_tickets.json").read_text())[0])
-    decisions = [route(classifier.classify(t), retriever.search(t.text)) for _ in range(2)]
+    decisions = [route(classifier.classify(t, retriever.search(t.text)), retriever.search(t.text)) for _ in range(2)]
     assert decisions[0] == decisions[1]
 
 
 def test_empty_ticket_falls_back_and_escalates(classifier):
-    out = classifier.classify(normalize({"body": "   "}))
+    out = classifier.classify(normalize({"body": "   "}), [])
     assert out["fallback"] and out["intent"]["value"] == "unclear_request"
     assert route(out, HIT)["action"] == "escalate"
 
@@ -78,3 +79,10 @@ def test_missing_or_invalid_confidence_escalates(bad):
     d = route(cls(p_auto=bad), HIT)
     assert d["action"] == "escalate" and "GOV-CONFIDENCE-FLOOR" in d["requirement_ids"]
     assert route({"fallback": False, "p_auto": 0.99}, HIT)["action"] == "escalate"  # no intent block at all
+
+
+def test_numpy_scores_pass_the_confidence_floor():
+    import numpy as np
+    d = route({"fallback": False, "p_auto": np.float32(0.95),
+               "intent": {"value": "rate_limit", "confidence": np.float64(0.95)}}, HIT, threshold=0.85)
+    assert d["action"] == "auto_respond"

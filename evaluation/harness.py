@@ -28,8 +28,8 @@ MODEL = "all-MiniLM-L6-v2 + LogisticRegression"
 
 
 def process(t, retriever, classifier, log, llm) -> dict:
-    cls = classifier.classify(t)
     hits = retriever.search(t.text)
+    cls = classifier.classify(t, hits)
     injection = find_injection(t.text)
     if injection:  # instruction integrity: block and record every attempt, whatever routing would decide
         reason = f"The ticket tries to instruct the system ({'; '.join(injection)}); recorded for review."
@@ -93,7 +93,7 @@ def run(input_path: str, output_dir: str, llm=complete, limit: int | None = None
     records = json.loads(Path(input_path).read_text())
     records = records[:limit] if limit else records
     retriever = Retriever()
-    classifier = Classifier(retriever.model)
+    classifier = Classifier(retriever)
     log = DecisionLog(f"sqlite:///{(out / 'decisions.db').resolve()}")
     results = []
     with open(out / "results.jsonl", "w") as f:

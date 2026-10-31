@@ -1,8 +1,8 @@
 """Route: auto-respond or escalate, deterministically, with a reason a support manager can read (A5).
 
 Rules are checked in order; the first that fires decides. Thresholds come from
-evaluation/routing_threshold.py on dev tickets (out-of-fold): at 0.85, 18% of tickets auto-respond and
-12 of those 90 should have escalated; at 0.80 it is 29% and 24 of 145. 0.85 favours fewer wrong answers,
+evaluation/routing_threshold.py on dev tickets (out-of-fold): at 0.85, 24% of tickets auto-respond and
+17 of those 119 should have escalated; at 0.80 it is 32% and 24 of 160. 0.85 favours fewer wrong answers,
 which the Head of Support named as the first failure condition. No threshold auto-responds a
 must_not_auto_respond ticket.
 
@@ -12,6 +12,7 @@ Two governance checks come first (Governance Framework sections 4 and 5):
 - Confidence floor: a missing or non-numeric score escalates; a missing score is not a high one.
 """
 import math
+import numbers
 import os
 from pathlib import Path
 
@@ -26,7 +27,8 @@ INTENT_MIN = float(os.getenv("INTENT_MIN_CONFIDENCE", "0.50"))
 
 
 def is_score(x) -> bool:
-    return isinstance(x, (int, float)) and not isinstance(x, bool) and math.isfinite(x)
+    # numbers.Real, not (int, float): model outputs are often NumPy floats, which are not Python floats.
+    return isinstance(x, numbers.Real) and not isinstance(x, bool) and math.isfinite(x)
 
 
 def route(cls: dict, hits: list[dict], threshold: float = ROUTE_THRESHOLD, intent_min: float = INTENT_MIN) -> dict:

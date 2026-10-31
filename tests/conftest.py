@@ -11,4 +11,4 @@ def retriever(tmp_path_factory):
 
 @pytest.fixture(scope="session")
 def classifier(retriever):
-    return Classifier(retriever.model)
+    return Classifier(retriever)
