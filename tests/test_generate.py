@@ -15,7 +15,7 @@ def fake(reply):
         llm.user = user
         if isinstance(reply, Exception):
             raise reply
-        return reply if isinstance(reply, str) else json.dumps(reply)
+        return {"content": reply if isinstance(reply, str) else json.dumps(reply), "model": "fake"}
     return llm
 
 
@@ -32,7 +32,7 @@ def test_resolution_section_is_added(retriever, hits):
 def test_valid_cited_answer(retriever, hits):
     out = generate(TICKET, hits, retriever, llm=fake(
         {"status": "answered", "sentences": [{"text": "Back off and retry.", "cite": [hits[0]["chunk_id"]]}]}))
-    assert out["status"] == "answered" and out["prompt_version"] == "PR-01 v1.0"
+    assert out["status"] == "answered" and out["prompt_version"] == "PR-01 v1.0" and out["model"] == "fake"
 
 
 @pytest.mark.parametrize("reply", [

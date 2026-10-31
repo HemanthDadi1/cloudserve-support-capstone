@@ -48,9 +48,10 @@ def generate(ticket: Ticket, hits: list[dict], retriever, llm=complete) -> dict:
                   passages="\n".join(f'<passage id="{p["chunk_id"]}">{p["text"]}</passage>' for p in passages))
     base = {"prompt_version": f"{PROMPT['id']} v{PROMPT['version']}", "passages": [p["chunk_id"] for p in passages]}
     try:
-        raw = llm(PROMPT["system"], user)
+        res = llm(PROMPT["system"], user)
     except LLMUnavailable as e:
         return {**base, "status": "unavailable", "sentences": [], "error": str(e)}
+    raw, base["model"] = res["content"], res["model"]
     return {**base, **(parse(raw, set(base["passages"])) or {"status": "invalid", "sentences": [], "raw": raw[:500]})}
 
 

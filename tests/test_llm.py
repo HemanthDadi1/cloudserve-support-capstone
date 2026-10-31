@@ -20,13 +20,15 @@ class Resp:
 def offline(monkeypatch, tmp_path):
     monkeypatch.setattr(llm, "CACHE", tmp_path)
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    monkeypatch.setenv("MODEL_NAME", "primary")
+    monkeypatch.setenv("MODEL_FALLBACKS", "backup1,backup2")
     calls = []
 
     def use(*responses):
         it = iter(responses)
 
-        def post(*a, **kw):
-            calls.append(1)
+        def post(*a, json, **kw):
+            calls.append(json["model"])
             r = next(it)
             if isinstance(r, Exception):
                 raise r
@@ -36,23 +38,29 @@ def offline(monkeypatch, tmp_path):
     return use
 
 
-def test_retries_through_outage_then_caches(offline):
-    calls = offline(Resp(503), Resp(429), requests.Timeout(), Resp(200, '{"ok": 1}'))
-    assert llm.complete("s", "u", sleep=lambda s: None) == '{"ok": 1}'
-    assert llm.complete("s", "u", sleep=lambda s: None) == '{"ok": 1}'  # second call served from cache
-    assert len(calls) == 4
+def test_retry_then_success_and_cache(offline):
+    calls = offline(Resp(503), Resp(200, '{"ok": 1}'))
+    assert llm.complete("s", "u", sleep=lambda s: None) == {"content": '{"ok": 1}', "model": "primary"}
+    assert llm.complete("s", "u", sleep=lambda s: None)["model"] == "primary"  # second call served from cache
+    assert calls == ["primary", "primary"]
+
+
+def test_falls_back_when_primary_is_down(offline):
+    calls = offline(Resp(503), requests.Timeout(), Resp(429), Resp(200, '{"ok": 2}'))
+    assert llm.complete("s", "u2", sleep=lambda s: None)["model"] == "backup1"
+    assert calls == ["primary", "primary", "backup1", "backup1"]
 
 
 def test_gives_up_with_clear_signal(offline):
-    offline(*[Resp(503)] * 4)
-    with pytest.raises(llm.LLMUnavailable, match="HTTP 503"):
-        llm.complete("s", "u2", sleep=lambda s: None)
+    offline(*[Resp(503)] * 6)
+    with pytest.raises(llm.LLMUnavailable, match="backup2: HTTP 503"):
+        llm.complete("s", "u3", sleep=lambda s: None)
 
 
 def test_missing_key_is_unavailable_not_a_crash(offline, monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY")
     with pytest.raises(llm.LLMUnavailable):
-        llm.complete("s", "u3")
+        llm.complete("s", "u4")
 
 
 def test_prompt_files_load_and_render():
