@@ -27,6 +27,9 @@ EXHAUSTED: dict[str, str] = {}  # provider -> why it is unusable for the rest of
 # Each model is tried once per pass; when every model is busy, wait (retry-after, capped) and pass again.
 # Groq free tier: 1,000 requests/day but 8,000 tokens/minute per model, i.e. ~3 calls/minute each.
 PASSES, TIMEOUT, MAX_WAIT = 2, 60, 60
+# Longest completion measured on 1 Nov was 644 tokens (gpt-oss-20b, reasoning included); 900 leaves ~40%
+# headroom. A smaller request leaves more of each model's per-minute token budget for the next call.
+MAX_TOKENS = 900
 DEFAULT_MODEL = "groq:qwen/qwen3.8-27b"
 DEFAULT_FALLBACKS = ("groq:openai/gpt-oss-120b,groq:openai/gpt-oss-20b,nvidia/nemotron-3.5-super-vl:free,"
                      "recursive/flint-v1.0:free,xingchen-agi/xing4.0-29b-a4b:free")
@@ -76,7 +79,7 @@ def complete(system: str, user: str, sleep=time.sleep) -> dict:
                 continue
             try:
                 r = requests.post(url, timeout=TIMEOUT, headers={"Authorization": f"Bearer {key}"}, json={
-                    "model": name, "temperature": 0, "seed": 7, "max_tokens": 1500,
+                    "model": name, "temperature": 0, "seed": 7, "max_tokens": MAX_TOKENS,
                     "response_format": {"type": "json_object"},
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]})
                 if r.status_code == 429 and re.search(r"per[- ]day", r.text):  # OpenRouter / Groq wording

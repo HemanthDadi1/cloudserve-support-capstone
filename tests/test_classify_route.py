@@ -97,3 +97,18 @@ def test_confident_topic_suggests_its_article_only_when_search_missed_it():
 
 def test_classifier_learns_topic_articles(classifier):
     assert classifier.topic_article["rate_limit"] == "DOC-API-001"
+
+
+def test_expand_query_adds_the_title_only_when_the_topic_is_confident():
+    import numpy as np
+    from src.classify import expand_query
+    classes, articles, titles = np.array(["a", "b"]), {"a": "DOC-1"}, {"DOC-1": "Rate limits"}
+    assert expand_query("help", np.array([0.95, 0.05]), classes, articles, titles) == "help\nRate limits"
+    assert expand_query("help", np.array([0.60, 0.40]), classes, articles, titles) == "help"
+    assert expand_query("help", np.array([0.05, 0.95]), classes, articles, titles) == "help"  # topic with no article
+
+
+def test_classifier_query_and_calibrated_probability(classifier, retriever):
+    t = normalize({"body": "We keep getting 429 Too Many Requests from the API every afternoon"})
+    assert classifier.query(t).startswith(t.text) and classifier.query(normalize({"body": ""})) == ""
+    assert 0 <= classifier.classify(t, retriever.search(t.text))["p_auto"] <= 1

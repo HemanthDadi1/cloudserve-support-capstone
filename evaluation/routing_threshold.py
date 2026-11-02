@@ -11,7 +11,8 @@ import json
 import numpy as np
 from sklearn.model_selection import GroupKFold, cross_val_predict
 
-from src.classify import TOPIC_ARTICLE_MIN, auto_features, make_model, oof_intent_probs, targets, topic_articles
+from src.classify import (TOPIC_ARTICLE_MIN, auto_features, auto_prob, expand_query, fit_auto, make_model,
+                          oof_intent_probs, targets, topic_articles)
 from src.ingest import normalize
 from src.retrieve import ROOT, Retriever
 from src.route import route
@@ -27,27 +28,31 @@ def ece(conf, correct, bins=10):
 
 def out_of_fold(tickets, r: Retriever) -> dict:
     """Per-ticket predictions from models that never saw that ticket's wording, plus its search hits.
-    The answer-likelihood model is rebuilt exactly as Classifier builds it, inside each fold."""
+    Everything Classifier builds (expanded search, answer-likelihood model, Platt layer, topic articles)
+    is rebuilt here from each fold's training rows only."""
     X = r.model.encode([t.text for t in tickets], normalize_embeddings=True)
     groups, cv = np.array([t.body for t in tickets]), GroupKFold(n_splits=5)
     y = {k: np.array([targets(t)[k] for t in tickets]) for k in ("intent", "urgency", "auto")}
-    hits, channels = [r.search(t.text) for t in tickets], np.array([t.channel for t in tickets])
+    channels, titles = np.array([t.channel for t in tickets]), {c["doc_id"]: c["title"] for c in r.chunks.values()}
+    plain = [r.search(t.text) for t in tickets]  # routing, drafting and the answer-likelihood model
     oof = {k: cross_val_predict(make_model(k), X, y[k], cv=cv, groups=groups, method="predict_proba")
            for k in ("intent", "urgency")}
-    p_auto, topic = np.zeros(len(tickets)), [None] * len(tickets)
+    classes = np.unique(y["intent"])
+    p_auto, topic, hits = np.zeros(len(tickets)), [None] * len(tickets), [None] * len(tickets)
     for tr, te in cv.split(X, y["auto"], groups):
         articles = topic_articles([tickets[i] for i in tr])
-        F = auto_features(X[tr], oof_intent_probs(X[tr], y["intent"][tr], groups[tr]),
-                          [hits[i] for i in tr], channels[tr])
-        m = make_model("auto").fit(F, y["auto"][tr])
+        F = auto_features(X[tr], oof_intent_probs(X[tr], y["intent"][tr], groups[tr]), [plain[i] for i in tr],
+                          channels[tr])
+        model, platt = fit_auto(F, y["auto"][tr], groups[tr])
         intent_te = make_model("intent").fit(X[tr], y["intent"][tr]).predict_proba(X[te])
-        p_auto[te] = m.predict_proba(auto_features(X[te], intent_te, [hits[i] for i in te], channels[te]))[:, 1]
-        for i in te:
-            if oof["intent"][i].max() >= TOPIC_ARTICLE_MIN:
-                topic[i] = articles.get(np.unique(y["intent"])[oof["intent"][i].argmax()])
+        for j, i in enumerate(te):
+            hits[i] = r.search(expand_query(tickets[i].text, intent_te[j], classes, articles, titles))  # agent
+            if intent_te[j].max() >= TOPIC_ARTICLE_MIN:
+                topic[i] = articles.get(classes[intent_te[j].argmax()])
+        p_auto[te] = auto_prob(model, platt, auto_features(X[te], intent_te, [plain[i] for i in te], channels[te]))
     pred = {k: np.unique(y[k])[oof[k].argmax(1)] for k in ("intent", "urgency")}
     return {"y": y, "oof": oof, "intent": pred["intent"], "urgency": pred["urgency"],
-            "iconf": oof["intent"].max(1), "p_auto": p_auto, "hits": hits, "topic_article": topic}
+            "iconf": oof["intent"].max(1), "p_auto": p_auto, "hits": plain, "agent_hits": hits, "topic_article": topic}
 
 
 def main():

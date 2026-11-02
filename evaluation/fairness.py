@@ -49,7 +49,8 @@ def part_a(tickets) -> tuple[str, pd.DataFrame]:
         should_auto = lab["expected_route"] == "auto_respond"
         exp = set(lab["expected_doc_ids"])
         found = {h["doc_id"] for h in o["hits"][i]}
-        given = found | ({o["topic_article"][i]} if o["topic_article"][i] else set())  # what the agent receives
+        given = ({h["doc_id"] for h in o["agent_hits"][i]}  # what the agent receives on an escalation
+                 | ({o["topic_article"][i]} if o["topic_article"][i] else set()))
         rows.append({"customer_tier": t.customer_tier, "language_fluency": t.language_fluency,
                      "customer_region": t.customer_region, "length": len(t.text),
                      "answered": auto, "route_correct": auto == should_auto,

@@ -28,8 +28,11 @@ MODEL = "all-MiniLM-L6-v2 + LogisticRegression"
 
 
 def process(t, retriever, classifier, log, llm) -> dict:
-    hits = retriever.search(t.text)
+    hits = retriever.search(t.text)  # plain search: routing, drafting and checks
     cls = classifier.classify(t, hits)
+    # Topic-expanded search is for what the agent sees on an escalation. Drafting from it was worse on 48 paired
+    # dev tickets (evaluation/passage_compare.py): 28 sent / 20 blocked vs 34 / 13 with plain search.
+    agent_hits = retriever.search(classifier.query(t))
     injection = find_injection(t.text)
     if injection:  # instruction integrity: block and record every attempt, whatever routing would decide
         reason = f"The ticket tries to instruct the system ({'; '.join(injection)}); recorded for review."
@@ -51,9 +54,9 @@ def process(t, retriever, classifier, log, llm) -> dict:
     if injection:
         out["validation"] = {"checks": {"instruction": "fail"}, "verdicts": [], "blocked_reason": reason,
                              "found": {"injection": injection}}
-        return {**out, "final": "block", "packet": escalation_packet(t.text, cls, hits, f"Blocked: {reason}")}
+        return {**out, "final": "block", "packet": escalation_packet(t.text, cls, agent_hits, f"Blocked: {reason}")}
     if d["action"] == "escalate":
-        return {**out, "final": "escalate", "packet": escalation_packet(t.text, cls, hits, d["reason"])}
+        return {**out, "final": "escalate", "packet": escalation_packet(t.text, cls, agent_hits, d["reason"])}
 
     g = generate(t, hits, retriever, llm=llm)
     out["generation"] = {k: g.get(k) for k in ("status", "sentences", "model", "prompt_version", "error")}
@@ -64,7 +67,7 @@ def process(t, retriever, classifier, log, llm) -> dict:
         log.write(**common, stage="generation", model={"name": g.get("model"), "version": g["prompt_version"]},
                   prediction={"value": g["status"]}, action_taken="escalate", reason=reason,
                   prompt_version=g["prompt_version"], requirement_ids=["FR-07", "FR-11", "FR-10"])
-        return {**out, "final": "escalate", "packet": escalation_packet(t.text, cls, hits, reason)}
+        return {**out, "final": "escalate", "packet": escalation_packet(t.text, cls, agent_hits, reason)}
 
     v = validate(g["sentences"], t, passages_for(hits, retriever), llm=llm)
     out["validation"] = v
@@ -79,10 +82,11 @@ def process(t, retriever, classifier, log, llm) -> dict:
         reason = "Automated replies were switched off (kill switch) before this reply was sent."
         log.write(**common, stage="validation", action_taken="escalate", reason=reason,
                   requirement_ids=["GOV-KILL-SWITCH", "FR-10"])
-        return {**out, "final": "escalate", "packet": escalation_packet(t.text, cls, hits, reason)}
+        return {**out, "final": "escalate", "packet": escalation_packet(t.text, cls, agent_hits, reason)}
     if v["passed"]:
         return {**out, "final": "auto_respond", "reply": reply_text(g["sentences"])}
-    return {**out, "final": "block", "packet": escalation_packet(t.text, cls, hits, f"Blocked: {v['blocked_reason']}")}
+    reason = f"Blocked: {v['blocked_reason']}"
+    return {**out, "final": "block", "packet": escalation_packet(t.text, cls, agent_hits, reason)}
 
 
 def run(input_path: str, output_dir: str, llm=complete, limit: int | None = None) -> dict:

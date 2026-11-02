@@ -10,42 +10,42 @@ Short = 162 characters or fewer (the median). Rates in %. p-value: chi-square te
 
 | plan | tickets | answered automatically | routing correct | sends that should have escalated | retrieval hit (answerable) | article available to agent | intent accuracy | routing gap from best (points) |
 |---|---|---|---|---|---|---|---|---|
-| business | 164 | 20.7 | 52.4 | 3/34 | 91.9 | 97.6 | 94.5 | 5.4 |
-| enterprise | 83 | 19.3 | 57.8 | 0/16 | 94.9 | 98.3 | 95.2 | 0.0 |
-| standard | 253 | 27.3 | 55.3 | 14/69 | 94.9 | 99.4 | 94.9 | 2.5 |
+| business | 164 | 17.1 | 48.8 | 3/28 | 91.9 | 97.6 | 94.5 | 7.8 |
+| enterprise | 83 | 18.1 | 56.6 | 0/15 | 94.9 | 98.3 | 95.2 | 0.0 |
+| standard | 253 | 24.5 | 55.7 | 10/62 | 94.9 | 99.4 | 94.9 | 0.9 |
 
-p-values: answered 0.176; routing correct 0.702; retrieval hit 0.533; article available 0.393; intent 0.973
+p-values: answered 0.148; routing correct 0.317; retrieval hit 0.533; article available 0.393; intent 0.973
 
 ### By fluency
 
 | fluency | tickets | answered automatically | routing correct | sends that should have escalated | retrieval hit (answerable) | article available to agent | intent accuracy | routing gap from best (points) |
 |---|---|---|---|---|---|---|---|---|
-| fluent | 380 | 24.2 | 56.1 | 14/92 | 95.6 | 98.1 | 93.9 | 0.0 |
-| non_fluent | 120 | 22.5 | 50.8 | 3/27 | 88.5 | 100.0 | 97.5 | 5.3 |
+| fluent | 380 | 21.8 | 55.3 | 11/83 | 95.6 | 98.1 | 93.9 | 0.0 |
+| non_fluent | 120 | 18.3 | 48.3 | 2/22 | 88.5 | 100.0 | 97.5 | 7.0 |
 
-p-values: answered 0.794; routing correct 0.370; retrieval hit 0.034 *; article available 0.451; intent 0.196
+p-values: answered 0.488; routing correct 0.222; retrieval hit 0.034 *; article available 0.451; intent 0.196
 
 ### By region
 
 | region | tickets | answered automatically | routing correct | sends that should have escalated | retrieval hit (answerable) | article available to agent | intent accuracy | routing gap from best (points) |
 |---|---|---|---|---|---|---|---|---|
-| asia_pacific | 119 | 23.5 | 64.7 | 3/28 | 92.1 | 98.7 | 98.3 | 0.0 |
-| europe | 151 | 23.2 | 47.0 | 6/35 | 93.9 | 98.3 | 94.0 | 17.7 |
-| latin_america | 60 | 33.3 | 58.3 | 3/20 | 95.3 | 100.0 | 93.3 | 6.4 |
-| north_america | 170 | 21.2 | 53.5 | 5/36 | 94.3 | 98.4 | 93.5 | 11.2 |
+| asia_pacific | 119 | 19.3 | 62.2 | 2/23 | 92.1 | 98.7 | 98.3 | 0.0 |
+| europe | 151 | 20.5 | 44.4 | 6/31 | 93.9 | 98.3 | 94.0 | 17.8 |
+| latin_america | 60 | 30.0 | 58.3 | 2/18 | 95.3 | 100.0 | 93.3 | 3.9 |
+| north_america | 170 | 19.4 | 54.1 | 3/33 | 94.3 | 98.4 | 93.5 | 8.1 |
 
-p-values: answered 0.297; routing correct 0.032 *; retrieval hit 0.894; article available 0.860; intent 0.263
+p-values: answered 0.333; routing correct 0.026 *; retrieval hit 0.894; article available 0.860; intent 0.263
 
 ### By length
 
 | length | tickets | answered automatically | routing correct | sends that should have escalated | retrieval hit (answerable) | article available to agent | intent accuracy | routing gap from best (points) |
 |---|---|---|---|---|---|---|---|---|
-| long | 244 | 20.5 | 53.3 | 9/50 | 94.7 | 99.4 | 99.2 | 2.9 |
-| short | 256 | 27.0 | 56.2 | 8/69 | 93.0 | 97.9 | 90.6 | 0.0 |
+| long | 244 | 17.2 | 50.8 | 8/42 | 94.7 | 99.4 | 99.2 | 5.4 |
+| short | 256 | 24.6 | 56.2 | 5/63 | 93.0 | 97.9 | 90.6 | 0.0 |
 
-p-values: answered 0.112; routing correct 0.564; retrieval hit 0.667; article available 0.427; intent 0.000 *
+p-values: answered 0.055; routing correct 0.260; retrieval hit 0.667; article available 0.427; intent 0.000 *
 
-## Part B: replies sent in `evaluation/results/results.jsonl` (14 sent of 80)
+## Part B: replies sent in `evaluation/results/results.jsonl` (13 sent of 80)
 
 Too few replies per segment for tests; read as indicative only.
 
@@ -53,22 +53,22 @@ Too few replies per segment for tests; read as indicative only.
 
 | plan | tickets | drafted | sent | blocked | sent to unanswerable | citation accuracy % |
 |---|---|---|---|---|---|---|
-| business | 30 | 9 | 7 | 2 | 2 | 68.6 |
+| business | 30 | 9 | 6 | 3 | 1 | 75.0 |
 | enterprise | 8 | 4 | 3 | 1 | 0 | 100.0 |
-| standard | 42 | 5 | 4 | 1 | 1 | 70.6 |
+| standard | 42 | 5 | 4 | 1 | 1 | 64.7 |
 
 ### By fluency
 
 | fluency | tickets | drafted | sent | blocked | sent to unanswerable | citation accuracy % |
 |---|---|---|---|---|---|---|
-| fluent | 61 | 15 | 11 | 4 | 1 | 92.2 |
-| non_fluent | 19 | 3 | 3 | 0 | 2 | 29.4 |
+| fluent | 61 | 15 | 10 | 5 | 0 | 100.0 |
+| non_fluent | 19 | 3 | 3 | 0 | 2 | 27.8 |
 
 ### By region
 
 | region | tickets | drafted | sent | blocked | sent to unanswerable | citation accuracy % |
 |---|---|---|---|---|---|---|
-| asia_pacific | 21 | 5 | 4 | 1 | 0 | 100.0 |
-| europe | 25 | 6 | 4 | 2 | 2 | 50.0 |
+| asia_pacific | 21 | 5 | 3 | 2 | 0 | 100.0 |
+| europe | 25 | 6 | 4 | 2 | 1 | 68.4 |
 | latin_america | 7 | 1 | 0 | 1 | 0 | nan |
-| north_america | 27 | 6 | 6 | 0 | 1 | 79.4 |
+| north_america | 27 | 6 | 6 | 0 | 1 | 78.8 |
