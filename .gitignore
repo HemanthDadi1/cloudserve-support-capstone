@@ -10,3 +10,4 @@ evaluation/results*/
 storage/
 ci-results/
 demo/out*/
+.DS_Store

@@ -1,0 +1,233 @@
+{
+  "volume": {
+    "processed": 80,
+    "auto_answered": 13,
+    "escalated": 67,
+    "blocked": 5,
+    "errors": 0
+  },
+  "business": {
+    "first_contact_resolution_pct": 16.2,
+    "escalation_rate_pct": 83.8,
+    "first_reply_s_automated": {
+      "mean": 20.69,
+      "median": 3.03
+    },
+    "processing_s_all": {
+      "mean": 4.43,
+      "median": 0.04,
+      "p95": 62.06
+    },
+    "labelled_should_auto_pct": 60.0
+  },
+  "technical": {
+    "intent": {
+      "accuracy_pct": 100.0,
+      "macro_precision_pct": 100.0,
+      "macro_recall_pct": 100.0,
+      "calibration_error": 0.003,
+      "per_class": {
+        "account_access": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 4
+        },
+        "api_key_issue": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 6
+        },
+        "api_usage_question": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 4
+        },
+        "authentication_failure": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 3
+        },
+        "billing_query": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 10
+        },
+        "compliance_request": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 1
+        },
+        "configuration_help": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 3
+        },
+        "data_export": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 1
+        },
+        "data_residency": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 6
+        },
+        "database_issue": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 1
+        },
+        "deployment_failure": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 5
+        },
+        "feature_request": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 3
+        },
+        "integration_help": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 3
+        },
+        "onboarding": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 4
+        },
+        "performance_degradation": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 3
+        },
+        "quota_or_overage": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 2
+        },
+        "rate_limit": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 1
+        },
+        "rollback_request": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 6
+        },
+        "security_incident": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 4
+        },
+        "sso_configuration": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 1
+        },
+        "unclear_request": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 6
+        },
+        "webhook_issue": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "support": 3
+        }
+      }
+    },
+    "urgency_accuracy_pct": 42.5,
+    "retrieval_hit_rate_pct": 96.2,
+    "routing": {
+      "sent_but_should_escalate": 2,
+      "sent_but_must_not_auto": 0,
+      "agreement_with_expected_route_pct": 51.2
+    },
+    "citation_accuracy_pct": 78.7,
+    "drafts_unsupported_sentence_pct": 4.4,
+    "sent_unsupported_sentence_pct": 0.0,
+    "latency_s": {
+      "median": 0.04,
+      "p95": 62.06
+    },
+    "models_used": {
+      "groq:qwen/qwen3.8-27b": 10,
+      "groq:openai/gpt-oss-120b": 7,
+      "groq:openai/gpt-oss-20b": 1
+    }
+  },
+  "governance": {
+    "decisions_logged": 98,
+    "tickets_with_routing_decision": 80,
+    "log_reconciles": true,
+    "guardrail_activations": {
+      "instruction": 0,
+      "pii": 0,
+      "commitments": 0,
+      "grounding": 5,
+      "relevance": 0
+    },
+    "private_data_detections": 0,
+    "private_data_in_sent_replies": 0,
+    "blocked_reasons": {
+      "grounding could not be checked": 2,
+      "a sentence is not supported by its sources": 3
+    }
+  },
+  "fairness": {
+    "customer_tier": {
+      "groups": {
+        "business": {
+          "tickets": 30,
+          "auto_answered_pct": 20.0
+        },
+        "enterprise": {
+          "tickets": 8,
+          "auto_answered_pct": 37.5
+        },
+        "standard": {
+          "tickets": 42,
+          "auto_answered_pct": 9.5
+        }
+      },
+      "max_gap_points": 10.5
+    },
+    "customer_region": {
+      "groups": {
+        "asia_pacific": {
+          "tickets": 21,
+          "auto_answered_pct": 14.3
+        },
+        "europe": {
+          "tickets": 25,
+          "auto_answered_pct": 16.0
+        },
+        "latin_america": {
+          "tickets": 7,
+          "auto_answered_pct": 0.0
+        },
+        "north_america": {
+          "tickets": 27,
+          "auto_answered_pct": 22.2
+        }
+      },
+      "max_gap_points": 7.9
+    },
+    "language_fluency": {
+      "groups": {
+        "fluent": {
+          "tickets": 61,
+          "auto_answered_pct": 16.4
+        },
+        "non_fluent": {
+          "tickets": 19,
+          "auto_answered_pct": 15.8
+        }
+      },
+      "max_gap_points": 0.6
+    }
+  }
+}

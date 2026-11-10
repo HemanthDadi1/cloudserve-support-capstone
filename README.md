@@ -71,6 +71,27 @@ Model responses are cached in `storage/llm_cache/`; delete it to force fresh cal
 python -m pytest tests/ -v
 ```
 
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `src/` | The pipeline: ingest, retrieve, classify, route, generate, validate, decision log, model client |
+| `prompts/` | Live prompts (PR-01 answer, PR-02 grounding, PR-03 spec review); `history/` keeps earlier and rejected versions |
+| `tests/` | Unit and end-to-end tests; no API keys needed |
+| `evaluation/` | Harness, metrics, fairness audit and experiment scripts; `validation_run/` is the recorded validation run |
+| `discovery/` | Evidence tables built from the development tickets |
+| `docs/` | Architecture notes and the ticket-flow diagram (`docs/architecture.md`) |
+| `demo/` | Six tickets for the video demonstration; `python demo/show.py <results.jsonl>` prints a run readably |
+| `data/` | Development, validation and documentation files from the capstone pack |
+
+## Attribution and AI tool use
+
+The code, tests and analysis scripts were written with an AI coding assistant (Claude Code) under the
+author's direction: the author chose what to build, which experiments to run, and which results to adopt or
+reject, and reviewed the results. No third-party code was copied beyond the libraries in `requirements.txt`.
+The embedding model is `sentence-transformers/all-MiniLM-L6-v2`; drafts and grounding checks use free-tier
+models on Groq and OpenRouter (listed in `.env.example`).
+
 ## Dependencies
 
 `requirements.in` lists top-level packages; `requirements.txt` is the full pinned lock.
