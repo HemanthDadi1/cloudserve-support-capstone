@@ -1,8 +1,9 @@
 #!/bin/zsh
 # Guided live demo for the video. Press Enter to move to each step. Run from the repo root:
-#   source .venv/bin/activate && ./demo/run_demo.sh
+#   ./demo/run_demo.sh
 # Talking points for each step are in demo/DEMO.md.
 cd "${0:A:h}/.." || exit 1
+source .venv/bin/activate || exit 1
 rm -f storage/AUTOMATION_OFF
 
 step() { print -P "\n%F{yellow}=== $1%f"; print -P "%F{8}$2%f"; read -r "?(Enter to run) "; }

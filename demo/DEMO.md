@@ -3,7 +3,6 @@
 Run it with:
 
 ```bash
-source .venv/bin/activate
 ./demo/run_demo.sh
 ```
 
