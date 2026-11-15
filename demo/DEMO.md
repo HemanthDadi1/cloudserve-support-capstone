@@ -41,6 +41,14 @@ in `evaluation/validation_run/`. To show real model calls in step 5, start the s
 (it clears the cache before step 5, and the run then takes about 2 minutes), but only if the models are
 responding well that day.
 
+## If asked about the 82% escalation rate
+
+The brief asked for 30% or lower. I revised it in PRD v2 to about 80%, with every escalation carrying
+the likely topic, the relevant articles and the reason. A fifth of tickets are topics that always go to
+a person, and at the safe 0.85 threshold the system answers only what it can prove from the docs.
+Lowering the threshold to 0.50 still escalates about 37% and sends about 20% wrong answers, so 30% is
+not reachable safely.
+
 ## If something goes wrong
 
 - A model is busy or down: the ticket escalates with "The model provider is unavailable". Say this is
