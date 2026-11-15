@@ -15,8 +15,8 @@ step "2. What happened to each ticket and why" "python demo/show.py demo/out/res
 python demo/show.py demo/out/results.jsonl
 
 step "3. The decision log: one row per decision, with its reason and requirement" "sqlite3 demo/out/decisions.db ..."
-sqlite3 -header -column demo/out/decisions.db \
-  "select ticket_id, stage, action_taken, substr(reason,1,58) reason, requirement_ids from decisions order by decision_id;"
+sqlite3 -list -separator '  |  ' demo/out/decisions.db \
+  "select ticket_id, stage, action_taken, substr(reason,1,48), requirement_ids from decisions order by ticket_id, decision_id;"
 
 step "4. Kill switch on: nothing is answered" "touch storage/AUTOMATION_OFF, then run the same six tickets"
 touch storage/AUTOMATION_OFF
@@ -25,8 +25,10 @@ rm -f storage/AUTOMATION_OFF
 print -P "%F{green}Kill switch removed.%f"
 
 step "5. The full unattended run: all 80 validation tickets" "python -m evaluation.harness --input data/validation_tickets.json --output evaluation/results/"
+[[ -n $DEMO_FRESH ]] && rm -rf storage/llm_cache   # DEMO_FRESH=1 ./demo/run_demo.sh: real model calls
 python -m evaluation.harness --input data/validation_tickets.json --output evaluation/results/ 2>&1 | grep -E "^\[|Done" | tail -15
 
-step "6. The report it wrote" "head -34 evaluation/results/metrics.md"
-head -34 evaluation/results/metrics.md
+step "6. The report it wrote: volume, then governance" "sed -n on evaluation/results/metrics.md"
+sed -n '/^## Volume/,/^## Business/p' evaluation/results/metrics.md | sed '$d'
+sed -n '/^## Governance/,/^## Fairness/p' evaluation/results/metrics.md | sed '$d'
 print -P "\n%F{green}Demo finished.%f"

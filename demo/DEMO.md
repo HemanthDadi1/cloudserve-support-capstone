@@ -37,8 +37,9 @@ Routing is fixed from run to run. Which model drafts a reply depends on which is
 Model answers are cached in `storage/llm_cache/`, so a repeat run is fast and gives the same drafts. A run
 from a clean cache can differ by a reply or two from the report (the 2 November run answered 13 of 80;
 a cached rerun gave 14). Routing never changes. Say that the report's figures are from the recorded run
-in `evaluation/validation_run/`. To show real model latency, delete `storage/llm_cache/` before step 5,
-but only if the models are responding well that day.
+in `evaluation/validation_run/`. To show real model calls in step 5, start the script with `DEMO_FRESH=1 ./demo/run_demo.sh`
+(it clears the cache before step 5, and the run then takes about 2 minutes), but only if the models are
+responding well that day.
 
 ## If something goes wrong
 
