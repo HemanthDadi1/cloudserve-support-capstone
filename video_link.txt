@@ -1,0 +1,7 @@
+Title: CloudServe Support: answering only what the documentation can prove
+
+One line: A support system that sends a reply only when the reply can be checked against CloudServe's documentation, and passes every other ticket to a person with context and a logged reason.
+
+Description: CloudServe asked for a chatbot. Discovery on 500 past tickets showed that most answers already existed but weren't reaching customers or agents. This video walks through that finding, the design it led to, a live run on real tickets showing a success, an escalation and a guardrail block, and the unattended validation run. It also covers results against target, including the shortfalls, and governance.
+
+Video Link: https://drive.google.com/file/d/1Z7J1ECmc5QuT4grGpcGZOv2pVIJKVgBi/view?usp=sharing

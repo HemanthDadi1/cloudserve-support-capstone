@@ -71,6 +71,13 @@ Model responses are cached in `storage/llm_cache/`; delete it to force fresh cal
 python -m pytest tests/ -v
 ```
 
+## Video demonstration
+
+The 18-minute capstone video pitch and live demonstration is available at:
+- **Video Link:** [CloudServe Support Video Walkthrough](https://drive.google.com/file/d/1Z7J1ECmc5QuT4grGpcGZOv2pVIJKVgBi/view?usp=sharing)
+- **Demo Guide:** See `demo/DEMO.md` for the live terminal run sheet and talking points.
+- **Visual Audit Dashboard:** Open `demo/dashboard.html` in any browser to inspect decisions, pipeline metrics, and guardrail verdicts.
+
 ## Repository layout
 
 | Path | Contents |
