@@ -56,3 +56,11 @@ not reachable safely.
 - Step 5 is slow: wait. If you must cut, show `evaluation/validation_run/metrics.md` and say it is
   the 2 November run.
 - A kill switch file is left behind: `rm -f storage/AUTOMATION_OFF`.
+
+## Optional: Visual Audit Dashboard
+
+To show an interactive visual summary of the demo and validation runs in your browser during the presentation:
+```bash
+open demo/dashboard.html
+```
+Generated via `python demo/generate_dashboard.py`. Completely self-contained (zero server, zero external dependencies). Toggles between the 6 demo tickets and 80 validation tickets with full audit trails and guardrail check verdicts.
